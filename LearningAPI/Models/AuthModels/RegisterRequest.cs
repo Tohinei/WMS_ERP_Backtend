@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Data;
+using Microsoft.AspNetCore.Identity;
 
-namespace WMS_ERP_Backend.Models
+namespace WMS_ERP_Backend.Models.AuthModels
 {
-    public class User
+    public class RegisterRequest
     {
         [Key]
         public int Id { get; set; }
@@ -17,15 +16,6 @@ namespace WMS_ERP_Backend.Models
         [StringLength(50)]
         public string LastName { get; set; }
 
-        public Boolean Status { get; set; } = false;
-
-        [Required]
-        public string BirthDate { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        public DateTime LastModified { get; set; }
-
         [Required]
         [EmailAddress]
         public string Email { get; set; }
@@ -33,7 +23,9 @@ namespace WMS_ERP_Backend.Models
         [Required]
         [StringLength(100)]
         public string Password { get; set; }
+
         public int RoleId { get; set; }
+
         public Role Role { get; set; }
     }
 }

@@ -1,7 +1,7 @@
-﻿using LearningAPI.DAOProject.IDAO;
-using LearningAPI.Models;
+﻿using WMS_ERP_Backend.DAOProject.IDAO;
+using WMS_ERP_Backend.Models;
 
-namespace LearningAPI.Services
+namespace WMS_ERP_Backend.Services
 {
     public class UserService
     {
@@ -12,20 +12,34 @@ namespace LearningAPI.Services
             _userDAO = userDAO;
         }
 
-        public async Task<List<User>> GetAll() => await _userDAO.GetAll();
+        public async Task<List<User>> GetAll()
+        {
+            return await _userDAO.GetAll();
+        }
 
-        public async Task<User?> GetById(int id) => await _userDAO.GetById(id);
+        public async Task<User> GetById(int id)
+        {
+            return await _userDAO.GetById(id);
+        }
 
-        public async Task<List<User>> GetByRole(String role) => await _userDAO.GetByRole(role);
+        public async Task Create(User user)
+        {
+            await _userDAO.Create(user);
+        }
 
-        public async Task Add(User user) => await _userDAO.Add(user);
+        public async Task Delete(int id)
+        {
+            await _userDAO.Delete(id);
+        }
 
-        public async Task Delete(int id) => await _userDAO.Delete(id);
+        public async Task Update(User user)
+        {
+            await _userDAO.Update(user);
+        }
 
-        public async Task Update(User user) => await _userDAO.Update(user);
-
-        public async Task UpdateRole(int id, String role) => await _userDAO.UpdateRole(id, role);
-
-        public async Task DeleteUsers(int[] usersIds) => await _userDAO.DeleteUsers(usersIds);
+        public async Task DeleteMany(List<int> usersId)
+        {
+            await _userDAO.DeleteMany(usersId);
+        }
     }
 }

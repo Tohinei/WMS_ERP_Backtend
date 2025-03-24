@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
+using System.Data;
 
 namespace WMS_ERP_Backend.Models
 {
-    public class Role
+    public class Menu
     {
         [Key]
         public int Id { get; set; }
@@ -13,8 +13,6 @@ namespace WMS_ERP_Backend.Models
         [StringLength(50)]
         public string Name { get; set; }
 
-        public int? MenuId { get; set; }
-
-        public Menu Menu { get; set; }
+        public List<Link>? Links { get; set; }
     }
 }

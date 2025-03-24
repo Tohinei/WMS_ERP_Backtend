@@ -1,10 +1,13 @@
 ﻿using System.Threading.Tasks;
-using LearningAPI.Models;
-using LearningAPI.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using WMS_ERP_Backend.Models;
+using WMS_ERP_Backend.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace LearningAPI.Controllers
+namespace WMS_ERP_Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -18,29 +21,76 @@ namespace LearningAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<User>>> GetAll() => Ok(await _userService.GetAll());
+        public async Task<ActionResult<List<User>>> GetAll()
+        {
+            var users = await _userService.GetAll();
+            if (users == null || users.Count() == 0)
+            {
+                return NotFound(
+                    new
+                    {
+                        statusCode = 404,
+                        type = "error",
+                        message = "no users",
+                        data = new { users = users },
+                    }
+                );
+            }
+            return Ok(
+                new
+                {
+                    statusCode = 200,
+                    type = "success",
+                    message = "fetching users success",
+                    data = new { users = users },
+                }
+            );
+        }
 
-        [HttpGet("/{id}")]
+        [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetById(int id) => Ok(await _userService.GetById(id));
 
-        [HttpGet("/role/{role}")]
-        public async Task<ActionResult<List<User>>> GetByRole(String role) =>
-            Ok(await _userService.GetByRole(role));
-
         [HttpPost]
-        public async Task<ActionResult> Add(User user)
+        public async Task<ActionResult> Create(User user)
         {
             if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            await _userService.Add(user);
-            return Ok($"New user with id = {user.Id} has been added");
+            {
+                return BadRequest(
+                    new
+                    {
+                        statusCode = 400,
+                        type = "error",
+                        message = "user is null",
+                        data = user,
+                    }
+                );
+            }
+
+            await _userService.Create(user);
+            return Ok(
+                new
+                {
+                    statusCode = 200,
+                    type = "success",
+                    message = "user is added",
+                    data = user,
+                }
+            );
         }
 
         [HttpPut]
         public async Task<ActionResult> Update(User user)
         {
             await _userService.Update(user);
-            return Ok($"User with id = {user.Id} has been updated");
+            return Ok(
+                new
+                {
+                    statusCode = 200,
+                    type = "success",
+                    message = "user is updated",
+                    data = user,
+                }
+            );
         }
 
         [HttpDelete("{id}")]
@@ -50,23 +100,32 @@ namespace LearningAPI.Controllers
             return Ok($"User with id = {id} has been deleted");
         }
 
-        [HttpPatch]
-        public async Task<ActionResult> UpdateRole(int id, String role)
-        {
-            await _userService.UpdateRole(id, role);
-            return Ok($"User with id = {id} role has been updated to the role of {role}");
-        }
-
         [HttpDelete("deleteUsers")]
-        public async Task<ActionResult> DeleteUsers([FromBody] int[] userIds)
+        public async Task<ActionResult> DeleteUsers([FromBody] List<int> users)
         {
-            if (userIds == null || userIds.Length == 0)
+            if (users == null || !users.Any())
             {
-                return BadRequest();
+                return BadRequest(
+                    new
+                    {
+                        statusCode = 400,
+                        type = "error",
+                        message = "links list is empty",
+                        data = users,
+                    }
+                );
             }
 
-            await _userService.DeleteUsers(userIds);
-            return Ok();
+            await _userService.DeleteMany(users);
+            return Ok(
+                new
+                {
+                    statusCode = 200,
+                    type = "success",
+                    message = "links are deleted",
+                    data = users,
+                }
+            );
         }
     }
 }

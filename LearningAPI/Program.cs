@@ -1,11 +1,11 @@
 using System.Text;
-using LearningAPI.DAOProject.DAO;
-using LearningAPI.DAOProject.IDAO;
-using LearningAPI.Data;
-using LearningAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using WMS_ERP_Backend.DAOProject.DAO;
+using WMS_ERP_Backend.DAOProject.IDAO;
+using WMS_ERP_Backend.Data;
+using WMS_ERP_Backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +35,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserDAO, UserDAO>();
 builder.Services.AddScoped<UserService>();
+
+builder.Services.AddScoped<IRoleDAO, RoleDAO>();
+builder.Services.AddScoped<RoleService>();
+
+builder.Services.AddScoped<IMenuDAO, MenuDAO>();
+builder.Services.AddScoped<MenuService>();
+
+builder.Services.AddScoped<ILinkDAO, LinkDAO>();
+builder.Services.AddScoped<LinkService>();
+
 builder.Services.AddScoped<JwtService>(provider => new JwtService(key));
 
 // Add services to the container.

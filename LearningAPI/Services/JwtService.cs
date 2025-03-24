@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.IdentityModel.Tokens;
 
-namespace LearningAPI.Services
+namespace WMS_ERP_Backend.Services
 {
     public class JwtService
     {

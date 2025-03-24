@@ -1,7 +1,7 @@
-﻿using LearningAPI.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using WMS_ERP_Backend.Models;
 
-namespace LearningAPI.Data
+namespace WMS_ERP_Backend.Data
 {
     public class AppDbContext : DbContext
     {
@@ -9,5 +9,8 @@ namespace LearningAPI.Data
             : base(options) { }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Menu> Menus { get; set; }
+        public DbSet<Link> Links { get; set; }
     }
 }

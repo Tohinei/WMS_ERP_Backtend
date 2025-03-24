@@ -1,17 +1,14 @@
-﻿using LearningAPI.Models;
+﻿using WMS_ERP_Backend.Models;
 
-namespace LearningAPI.DAOProject.IDAO
+namespace WMS_ERP_Backend.DAOProject.IDAO
 {
     public interface IUserDAO
     {
         Task<List<User>> GetAll();
-        Task<User?> GetById(int id);
-
-        Task<List<User>> GetByRole(string Role);
-        Task Add(User user);
-        Task Update(User user);
-        Task UpdateRole(int id, string role);
+        Task<User> GetById(int id);
+        Task Create(User user);
+        Task Update(User updatedUser);
         Task Delete(int id);
-        Task DeleteUsers(int[] userIds);
+        Task DeleteMany(List<int> usersId);
     }
 }
