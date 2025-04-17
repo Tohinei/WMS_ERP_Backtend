@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.IdentityModel.Tokens;
 
-namespace WMS_ERP_Backend.Services
+namespace WMS_ERP_Backend.DaoProject.Services
 {
     public class JwtService
     {

@@ -1,14 +1,13 @@
 ﻿using WMS_ERP_Backend.Models;
 
-namespace WMS_ERP_Backend.DAOProject.IDAO
+namespace WMS_ERP_Backend.DaoProject.IDao
 {
-    public interface IRoleDAO
+    public interface IRoleDao
     {
-        Task<List<Role>> GetAll();
-        Task<Role> GetById(int id);
-        Task Create(Role role);
-        Task Update(Role role);
-        Task Delete(int id);
-        Task DeleteMany(List<int> roles);
+        Role GetById(int roleId);
+        List<Role> GetAll();
+        int Create(Role role);
+        bool Update(Role role);
+        bool Delete(int roleId);
     }
 }

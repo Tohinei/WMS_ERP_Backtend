@@ -1,16 +1,11 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.AspNetCore.Mvc;
 using WMS_ERP_Backend.Models;
 using WMS_ERP_Backend.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WMS_ERP_Backend.Controllers
 {
+    [Route("user")]
     [ApiController]
-    [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly UserService _userService;
@@ -20,110 +15,133 @@ namespace WMS_ERP_Backend.Controllers
             _userService = userService;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<List<User>>> GetAll()
+        [HttpGet("{userId}")]
+        public ActionResult<object> GetById(int userId)
         {
-            var users = await _userService.GetAll();
-            if (users == null || users.Count() == 0)
+            var user = _userService.GetById(userId);
+            if (user == null)
             {
                 return NotFound(
                     new
                     {
+                        data = (object)null,
+                        type = "User",
                         statusCode = 404,
-                        type = "error",
-                        message = "no users",
-                        data = new { users = users },
+                        message = "User not found",
                     }
                 );
             }
             return Ok(
                 new
                 {
+                    data = user,
+                    type = "User",
                     statusCode = 200,
-                    type = "success",
-                    message = "fetching users success",
-                    data = new { users = users },
+                    message = "User fetched successfully",
                 }
             );
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetById(int id) => Ok(await _userService.GetById(id));
-
-        [HttpPost]
-        public async Task<ActionResult> Create(User user)
+        [HttpGet]
+        public ActionResult<object> GetAll()
         {
-            if (user == null)
-            {
-                return BadRequest(
-                    new
-                    {
-                        statusCode = 400,
-                        type = "error",
-                        message = "user is null",
-                        data = user,
-                    }
-                );
-            }
-
-            await _userService.Create(user);
+            var users = _userService.GetAll();
             return Ok(
                 new
                 {
+                    data = users,
+                    type = "User",
                     statusCode = 200,
+                    message = "Users fetched successfully",
+                }
+            );
+        }
+
+        [HttpPost]
+        public ActionResult<object> Create(User user)
+        {
+            var userId = _userService.Create(user);
+            return Ok(
+                new
+                {
+                    data = userId,
                     type = "success",
-                    message = "user is added",
-                    data = user,
+                    statusCode = 201,
+                    message = "User created successfully",
                 }
             );
         }
 
         [HttpPut]
-        public async Task<ActionResult> Update(User user)
+        public ActionResult<object> Update(User user)
         {
-            await _userService.Update(user);
+            var success = _userService.Update(user);
+            if (!success)
+            {
+                return NotFound(
+                    new
+                    {
+                        data = (object)null,
+                        type = "error",
+                        statusCode = 404,
+                        message = "User not found",
+                    }
+                );
+            }
             return Ok(
                 new
                 {
-                    statusCode = 200,
-                    type = "success",
-                    message = "user is updated",
                     data = user,
+                    type = "success",
+                    statusCode = 200,
+                    message = "User updated successfully",
                 }
             );
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [HttpDelete("{userId}")]
+        public ActionResult<object> Delete(int userId)
         {
-            await _userService.Delete(id);
-            return Ok($"User with id = {id} has been deleted");
-        }
-
-        [HttpDelete("deleteUsers")]
-        public async Task<ActionResult> DeleteUsers([FromBody] List<int> users)
-        {
-            if (users == null || !users.Any())
+            var success = _userService.Delete(userId);
+            if (!success)
             {
-                return BadRequest(
+                return NotFound(
                     new
                     {
-                        statusCode = 400,
+                        data = (object)null,
+                        type = "User",
+                        statusCode = 404,
+                        message = "User not found",
+                    }
+                );
+            }
+            return NoContent();
+        }
+
+        [HttpDelete("many")]
+        public ActionResult<object> DeleteMany(int userId)
+        {
+            var success = _userService.DeleteMany(new List<int> { userId });
+            if (!success)
+            {
+                return NotFound(
+                    new
+                    {
+                        data = (object)null,
                         type = "error",
-                        message = "links list is empty",
-                        data = users,
+                        statusCode = 404,
+                        message = "User not found",
                     }
                 );
             }
 
-            await _userService.DeleteMany(users);
             return Ok(
                 new
                 {
-                    statusCode = 200,
+                    data = (object)null,
                     type = "success",
-                    message = "links are deleted",
-                    data = users,
+                    statusCode = 200,
+                    message = "User deleted",
                 }
             );
         }

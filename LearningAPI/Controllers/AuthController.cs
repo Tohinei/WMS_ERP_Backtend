@@ -1,115 +1,100 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using WMS_ERP_Backend.Data;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using WMS_ERP_Backend.DaoProject.Services;
 using WMS_ERP_Backend.Models;
-using WMS_ERP_Backend.Models.AuthModels;
 using WMS_ERP_Backend.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WMS_ERP_Backend.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("auth")]
     public class AuthController : ControllerBase
     {
         private readonly JwtService _jwtService;
-        private readonly AppDbContext _context;
+        private readonly string _connectionString;
+        private readonly MenuService _menuService;
 
-        public AuthController(AppDbContext context)
+        public AuthController(IConfiguration configuration, MenuService menuService)
         {
-            _jwtService = new JwtService("mysecretkeymysecretkeymysecretkeymysecretkeymysecretkey");
-            _context = context;
+            _jwtService = new JwtService(
+                "3fd133c1259bb53e43826ce7758897e6bafb804fb93b89f2e553796d7af58c99"
+            );
+            _connectionString = configuration.GetConnectionString("Connection");
+            _menuService = menuService;
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest req)
+        [HttpPost("sign-in")]
+        public async Task<IActionResult> SignIn([FromBody] SignInRequest request)
         {
-            var user = await _context
-                .Users.Include(r => r.Role)
-                .ThenInclude(m => m.Menu)
-                .ThenInclude(l => l.Links)
-                .FirstOrDefaultAsync(user => user.Email == req.Email);
-
-            if (user == null)
-                return BadRequest(
-                    new
-                    {
-                        message = "Invalid email",
-                        type = "error",
-                        statusCode = 400,
-                    }
-                );
-
-            //if (!_jwtService.VerifyPassword(req.Password, user.Password))
-            //return BadRequest(
-            //    new
-            //    {
-            //        message = "Invalid password",
-            //        type = "error",
-            //        statusCode = 400,
-            //    }
-            //);
-
-            user.Status = true;
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
+            dynamic user = await GetUserByEmailAsync(request.Email);
+            if (user == null || !_jwtService.VerifyPassword(request.Password, user.Password))
+            {
+                return Unauthorized("Invalid credentials.");
+            }
 
             var token = _jwtService.GenerateToken(user.Email);
-
             return Ok(
                 new
                 {
-                    statusCode = 200,
+                    data = new { Token = token, loggedUser = user },
+                    message = "logged in",
                     type = "success",
-                    message = "User Logged In",
-                    data = new { token = token, loggedUser = user },
+                    statusCode = 200,
                 }
             );
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest req)
+        private async Task<object> GetUserByEmailAsync(string email)
         {
-            var userExists = await _context.Users.AnyAsync(x => x.Email == req.Email);
-
-            var hashedPassword = _jwtService.HashPassword(req.Password);
-
-            if (userExists)
-                return Unauthorized("Already Exist");
-
-            var user = new User
+            using (var connection = new SqlConnection(_connectionString))
             {
-                Email = req.Email,
-                Password = hashedPassword,
-                FirstName = req.FirstName,
-                LastName = req.LastName,
-                RoleId = req.RoleId,
-                Role = req.Role,
-            };
+                await connection.OpenAsync();
+                Console.WriteLine(connection.ConnectionString);
+                var query =
+                    "SELECT UserId, FirstName, LastName, Email, Password, RoleId, MenuId, CreatedAt, UpdatedAt FROM [User] WHERE Email = @Email";
 
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "User has been added" });
-        }
-
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] LoginRequest req)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(user => user.Email == req.Email);
-
-            user.Status = false;
-            _context.Users.Update(user);
-            _context.SaveChanges();
-
-            return Ok(
-                new
+                using (var command = new SqlCommand(query, connection))
                 {
-                    message = "you logout",
-                    type = "success",
-                    statusCode = 200,
+                    command.Parameters.AddWithValue("@Email", email);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            dynamic menu = _menuService.GetById(Convert.ToInt32(reader["MenuId"]));
+                            var sessions = menu.Sessions;
+                            var menuName = menu.Menu.MenuName;
+
+                            return new
+                            {
+                                UserId = Convert.ToInt32(reader["UserId"]),
+                                FirstName = reader["FirstName"].ToString(),
+                                LastName = reader["LastName"].ToString(),
+                                Email = reader["Email"].ToString(),
+                                Password = reader["Password"].ToString(),
+                                RoleId = Convert.ToInt32(reader["RoleId"]),
+                                Menu = new
+                                {
+                                    MenuId = Convert.ToInt32(reader["MenuId"]),
+                                    MenuName = menuName,
+                                    Sessions = sessions,
+                                },
+                                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                UpdatedAt = reader["UpdatedAt"] as DateTime?,
+                            };
+                        }
+                    }
                 }
-            );
+            }
+
+            return null;
         }
+        //[HttpPost("sign-up")]
+        //public Task<IActionResult> SignUp([FromBody] Request request) { }
+
+        //[HttpPost("sign-out")]
+        //public Task<IActionResult> SignOut([FromBody] Request request) { }
     }
 }

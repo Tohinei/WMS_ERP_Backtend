@@ -1,14 +1,13 @@
 ﻿using WMS_ERP_Backend.Models;
 
-namespace WMS_ERP_Backend.DAOProject.IDAO
+namespace WMS_ERP_Backend.DaoProject.IDao
 {
-    public interface IMenuDAO
+    public interface IMenuDao
     {
-        Task<List<Menu>> GetAll();
-        Task<Menu> GetById(int id);
-        Task<int> Create(Menu menu);
-        Task Update(Menu menu);
-        Task Delete(int id);
-        Task DeleteMany(List<int> Menus);
+        object GetById(int menuId);
+        List<Menu> GetAll();
+        int Create(Menu menu);
+        bool Update(Menu menu);
+        bool Delete(int menuId);
     }
 }

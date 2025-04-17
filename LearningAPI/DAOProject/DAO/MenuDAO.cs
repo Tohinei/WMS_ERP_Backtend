@@ -1,90 +1,176 @@
-﻿using Microsoft.EntityFrameworkCore;
-using WMS_ERP_Backend.DAOProject.IDAO;
-using WMS_ERP_Backend.Data;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using WMS_ERP_Backend.DaoProject.Connection;
+using WMS_ERP_Backend.DaoProject.IDao;
 using WMS_ERP_Backend.Models;
 
-namespace WMS_ERP_Backend.DAOProject.DAO
+namespace WMS_ERP_Backend.DaoProject.IDao
 {
-    public class MenuDAO : IMenuDAO
+    public class MenuDao : IMenuDao
     {
-        private readonly AppDbContext _context;
+        private readonly DbConnection _context;
 
-        public MenuDAO(AppDbContext context)
+        public MenuDao(DbConnection context)
         {
             _context = context;
         }
 
-        public async Task<int> Create(Menu menu)
+        public int Create(Menu menu)
         {
-            var validLinks = new List<Link>();
-            var linkAreValid = true;
+            string query =
+                @"INSERT INTO Menu (MenuName, Description, CreatedAt)
+                VALUES (@MenuName, @Description, @CreatedAt);";
 
-            foreach (var link in menu.Links)
+            using (var connection = _context.CreateConnection())
             {
-                var exisitingLink = await _context.Links.FirstOrDefaultAsync(x => x.Id == link.Id);
-                if (exisitingLink != null && linkAreValid)
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
                 {
-                    validLinks.Add(exisitingLink);
-                    continue;
+                    command.Parameters.AddWithValue("@MenuName", menu.MenuName);
+                    command.Parameters.AddWithValue("@Description", menu.Description);
+                    command.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+
+                    return Convert.ToInt32(command.ExecuteScalar());
                 }
-                else
+            }
+        }
+
+        public bool Delete(int menuId)
+        {
+            string query = "DELETEFROM Menu WHERE MenuId = @MenuId";
+
+            using (var connection = _context.CreateConnection())
+            {
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
                 {
-                    linkAreValid = false;
-                    break;
+                    command.Parameters.AddWithValue("@MenuId", menuId);
+
+                    int rowsAffected = command.ExecuteNonQuery();
+                    return rowsAffected > 0;
                 }
             }
-            menu.Links = validLinks;
-            await _context.Menus.AddAsync(menu);
-            await _context.SaveChangesAsync();
-            return menu.Id;
         }
 
-        public async Task Delete(int id)
+        public List<Menu> GetAll()
         {
-            Menu? menu = await _context.Menus.FirstOrDefaultAsync(m => m.Id == id);
-            if (menu != null)
+            List<Menu> menus = new List<Menu>();
+            string query = "SELECT * FROM Menu";
+
+            using (var connection = _context.CreateConnection())
             {
-                _context.Menus.Remove(menu);
-                await _context.SaveChangesAsync();
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            menus.Add(
+                                new Menu
+                                {
+                                    MenuId = (int)reader["MenuId"],
+                                    MenuName = reader["MenuName"].ToString(),
+                                    Description = reader["Description"].ToString(),
+                                    CreatedAt = (DateTime)reader["CreatedAt"],
+                                    UpdatedAt = reader["UpdatedAt"] as DateTime?,
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+
+            return menus;
+        }
+
+        public object GetById(int menuId)
+        {
+            string query =
+                @"SELECT m.MenuId, m.MenuName, m.Description, m.CreatedAt, m.UpdatedAt, s.SessionId, s.SessionName, s.Path, s.Icon 
+                FROM Menu m
+                LEFT JOIN Session s ON m.MenuId = s.MenuId
+                WHERE m.MenuId = @MenuId;
+";
+
+            using (var connection = _context.CreateConnection())
+            {
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@MenuId", menuId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        Menu menu = null;
+                        List<Session> sessions = new List<Session>();
+
+                        while (reader.Read())
+                        {
+                            if (menu == null)
+                            {
+                                menu = new Menu
+                                {
+                                    MenuId = Convert.ToInt32(reader["MenuId"]),
+                                    MenuName = reader["MenuName"].ToString(),
+                                    Description = reader["Description"].ToString(),
+                                    CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                    UpdatedAt =
+                                        reader["UpdatedAt"] != DBNull.Value
+                                            ? Convert.ToDateTime(reader["UpdatedAt"])
+                                            : (DateTime?)null,
+                                };
+                            }
+
+                            if (reader["SessionId"] != DBNull.Value)
+                            {
+                                sessions.Add(
+                                    new Session
+                                    {
+                                        SessionId = Convert.ToInt32(reader["SessionId"]),
+                                        SessionName = reader["SessionName"].ToString(),
+                                        Path = reader["Path"].ToString(),
+                                        Icon = reader["Icon"].ToString(),
+                                        MenuId = Convert.ToInt32(reader["MenuId"]),
+                                        CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                        UpdatedAt =
+                                            reader["UpdatedAt"] != DBNull.Value
+                                                ? Convert.ToDateTime(reader["UpdatedAt"])
+                                                : (DateTime?)null,
+                                    }
+                                );
+                            }
+                        }
+
+                        return new { Menu = menu, Sessions = sessions };
+                    }
+                }
             }
         }
 
-        public async Task DeleteMany(List<int> menuIds)
+        public bool Update(Menu menu)
         {
-            var menus = await _context.Links.Where(m => menuIds.Contains(m.Id)).ToListAsync();
+            string query =
+                @"
+                UPDATE Menu
+                SET MenuName = @MenuName,
+                    Description = @Description,
+                    UpdatedAt = @UpdatedAt
+                WHERE MenuId = @MenuId";
 
-            if (menus.Any())
+            using (var connection = _context.CreateConnection())
             {
-                _context.Links.RemoveRange(menus);
-                await _context.SaveChangesAsync();
-            }
-        }
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@MenuId", menu.MenuId);
+                    command.Parameters.AddWithValue("@MenuName", menu.MenuName);
+                    command.Parameters.AddWithValue("@Description", menu.Description);
+                    command.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
 
-        public async Task<List<Menu>> GetAll()
-        {
-            return await _context.Menus.Include(m => m.Links).ToListAsync();
-        }
-
-        public async Task<Menu> GetById(int id)
-        {
-            Menu? menu = await _context
-                .Menus.Include(m => m.Links)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (menu == null)
-            {
-                throw new ArgumentException("Menu Not Found");
-            }
-            return menu;
-        }
-
-        public async Task Update(Menu updatedMenu)
-        {
-            Menu? menu = await _context.Menus.FirstOrDefaultAsync(r => r.Id == updatedMenu.Id);
-            if (menu != null)
-            {
-                menu.Name = updatedMenu.Name;
-                menu.Links = updatedMenu.Links;
-                await _context.SaveChangesAsync();
+                    int rowsAffected = command.ExecuteNonQuery();
+                    return rowsAffected > 0;
+                }
             }
         }
     }

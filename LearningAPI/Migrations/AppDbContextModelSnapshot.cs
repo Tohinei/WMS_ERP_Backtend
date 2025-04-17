@@ -4,13 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using WMS_ERP_Backend.Data;
+using WMS_ERP_Backend.DaoProject.Connection;
+
 
 #nullable disable
 
 namespace WMS_ERP_Backend.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
+    [DbContext(typeof(DbConnection))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

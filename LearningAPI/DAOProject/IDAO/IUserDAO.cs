@@ -1,14 +1,16 @@
-﻿using WMS_ERP_Backend.Models;
+﻿using System.Threading.Tasks;
+using WMS_ERP_Backend.Models;
 
-namespace WMS_ERP_Backend.DAOProject.IDAO
+namespace WMS_ERP_Backend.DaoProject.IDao
 {
-    public interface IUserDAO
+    public interface IUserDao
     {
-        Task<List<User>> GetAll();
-        Task<User> GetById(int id);
-        Task Create(User user);
-        Task Update(User updatedUser);
-        Task Delete(int id);
-        Task DeleteMany(List<int> usersId);
+        User GetById(int userId);
+        List<User> GetAll();
+        int Create(User user);
+        bool Update(User user);
+        bool Delete(int userId);
+
+        bool DeleteMany(List<int> usersIds);
     }
 }

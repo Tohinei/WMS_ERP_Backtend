@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Data;
+using Microsoft.AspNetCore.Mvc;
 using WMS_ERP_Backend.Models;
 using WMS_ERP_Backend.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WMS_ERP_Backend.Controllers
 {
+    [Route("role")]
     [ApiController]
-    [Route("api/[controller]")]
     public class RoleController : ControllerBase
     {
         private readonly RoleService _roleService;
@@ -16,101 +16,115 @@ namespace WMS_ERP_Backend.Controllers
             _roleService = roleService;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<List<Role>>> GetAll()
+        [HttpGet("{roleId}")]
+        public ActionResult<object> GetById(int roleId)
         {
-            var roles = await _roleService.GetAll();
-            if (roles == null || roles.Count() == 0)
+            var role = _roleService.GetById(roleId);
+            if (role == null)
             {
                 return NotFound(
                     new
                     {
+                        data = (object)null,
+                        type = "Role",
                         statusCode = 404,
-                        type = "error",
-                        message = "no roles",
-                        data = new { roles = roles },
+                        message = "Role not found",
                     }
                 );
             }
             return Ok(
                 new
                 {
+                    data = role,
+                    type = "Role",
                     statusCode = 200,
-                    type = "success",
-                    message = "fetching roles success",
-                    data = new { roles = roles },
+                    message = "Role fetched successfully",
                 }
             );
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Role>> GetById(int id) => Ok(await _roleService.GetById(id));
-
-        [HttpPost]
-        public async Task<ActionResult> Create(Role role)
+        [HttpGet]
+        public ActionResult<object> GetAll()
         {
-            if (role == null)
-            {
-                return BadRequest(
-                    new
-                    {
-                        statusCode = 400,
-                        type = "error",
-                        message = "role is null",
-                        data = role,
-                    }
-                );
-            }
-            await _roleService.Create(role);
+            var roles = _roleService.GetAll();
             return Ok(
                 new
                 {
+                    data = roles,
+                    type = "Role",
                     statusCode = 200,
-                    type = "success",
-                    message = "role is added",
-                    data = role,
+                    message = "Roles fetched successfully",
+                }
+            );
+        }
+
+        [HttpPost]
+        public ActionResult<object> Create(Role role)
+        {
+            var roleId = _roleService.Create(role);
+            return CreatedAtAction(
+                nameof(GetById),
+                new { roleId = roleId },
+                new
+                {
+                    data = roleId,
+                    type = "Role",
+                    statusCode = 201,
+                    message = "Role created successfully",
                 }
             );
         }
 
         [HttpPut]
-        public async Task<ActionResult> Update(Role role)
+        public ActionResult<object> Update(Role role)
         {
-            await _roleService.Update(role);
-            return Ok($"Role with id = {role.Id} has been updated");
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
-        {
-            await _roleService.Delete(id);
-            return Ok($"Role with id = {id} has been deleted");
-        }
-
-        [HttpDelete("deleteRoles")]
-        public async Task<ActionResult> DeleteRoles([FromBody] List<int> roles)
-        {
-            if (roles == null || !roles.Any())
+            var success = _roleService.Update(role);
+            if (!success)
             {
-                return BadRequest(
+                return NotFound(
                     new
                     {
-                        statusCode = 400,
-                        type = "error",
-                        message = "links list is empty",
-                        data = roles,
+                        data = (object)null,
+                        type = "success",
+                        statusCode = 404,
+                        message = "Role not found",
                     }
                 );
             }
-
-            await _roleService.DeleteMany(roles);
             return Ok(
                 new
                 {
-                    statusCode = 200,
+                    data = role,
                     type = "success",
-                    message = "links are deleted",
-                    data = roles,
+                    statusCode = 200,
+                    message = "role updated successfully",
+                }
+            );
+        }
+
+        [HttpDelete("{roleId}")]
+        public ActionResult<object> Delete(int roleId)
+        {
+            var success = _roleService.Delete(roleId);
+            if (!success)
+            {
+                return NotFound(
+                    new
+                    {
+                        data = (object)null,
+                        type = "Role",
+                        statusCode = 404,
+                        message = "Role not found",
+                    }
+                );
+            }
+            return Ok(
+                new
+                {
+                    data = roleId,
+                    type = "success",
+                    statusCode = 200,
+                    message = "role deleted successfully",
                 }
             );
         }

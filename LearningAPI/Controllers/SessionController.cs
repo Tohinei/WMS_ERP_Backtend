@@ -4,40 +4,40 @@ using WMS_ERP_Backend.Services;
 
 namespace WMS_ERP_Backend.Controllers
 {
-    [Route("menu")]
+    [Route("session")]
     [ApiController]
-    public class MenuController : ControllerBase
+    public class SessionController : ControllerBase
     {
-        private readonly MenuService _menuService;
+        private readonly SessionService _sessionService;
 
-        public MenuController(MenuService menuService)
+        public SessionController(SessionService sessionService)
         {
-            _menuService = menuService;
+            _sessionService = sessionService;
         }
 
-        [HttpGet("{menuId}")]
-        public ActionResult<object> GetById(int menuId)
+        [HttpGet("{sessionId}")]
+        public ActionResult<object> GetById(int sessionId)
         {
-            var menu = _menuService.GetById(menuId);
-            if (menu == null)
+            var session = _sessionService.GetById(sessionId);
+            if (session == null)
             {
                 return NotFound(
                     new
                     {
                         data = (object)null,
-                        type = "error",
+                        type = "Session",
                         statusCode = 404,
-                        message = "Menu not found",
+                        message = "Session not found",
                     }
                 );
             }
             return Ok(
                 new
                 {
-                    data = menu,
-                    type = "success",
+                    data = session,
+                    type = "Session",
                     statusCode = 200,
-                    message = "Menu fetched successfully",
+                    message = "Session fetched successfully",
                 }
             );
         }
@@ -45,67 +45,65 @@ namespace WMS_ERP_Backend.Controllers
         [HttpGet]
         public ActionResult<object> GetAll()
         {
-            var menus = _menuService.GetAll();
+            var sessions = _sessionService.GetAll();
             return Ok(
                 new
                 {
-                    data = menus,
+                    data = sessions,
                     type = "success",
                     statusCode = 200,
-                    message = "Menus fetched successfully",
+                    message = "Sessions fetched successfully",
                 }
             );
         }
 
         [HttpPost]
-        public ActionResult<object> Create(Menu menu)
+        public ActionResult<object> Create(Session session)
         {
-            var menuId = _menuService.Create(menu);
-            return CreatedAtAction(
-                nameof(GetById),
-                new { menuId = menuId },
+            var sessionId = _sessionService.Create(session);
+            return Ok(
                 new
                 {
-                    data = menuId,
+                    data = sessionId,
                     type = "success",
                     statusCode = 201,
-                    message = "Menu created successfully",
+                    message = "Session created successfully",
                 }
             );
         }
 
         [HttpPut]
-        public ActionResult<object> Update(Menu menu)
+        public ActionResult<object> Update(Session session)
         {
-            var success = _menuService.Update(menu);
+            var success = _sessionService.Update(session);
             if (!success)
             {
                 return NotFound(
                     new
                     {
                         data = (object)null,
-                        type = "Menu",
+                        type = "Session",
                         statusCode = 404,
-                        message = "Menu not found",
+                        message = "Session not found",
                     }
                 );
             }
             return NoContent();
         }
 
-        [HttpDelete("{menuId}")]
-        public ActionResult<object> Delete(int menuId)
+        [HttpDelete("{sessionId}")]
+        public ActionResult<object> Delete(int sessionId)
         {
-            var success = _menuService.Delete(menuId);
+            var success = _sessionService.Delete(sessionId);
             if (!success)
             {
                 return NotFound(
                     new
                     {
                         data = (object)null,
-                        type = "Menu",
+                        type = "Session",
                         statusCode = 404,
-                        message = "Menu not found",
+                        message = "Session not found",
                     }
                 );
             }

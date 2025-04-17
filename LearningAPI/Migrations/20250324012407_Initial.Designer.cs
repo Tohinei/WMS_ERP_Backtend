@@ -5,13 +5,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using WMS_ERP_Backend.Data;
+using WMS_ERP_Backend.DaoProject.Connection;
+
 
 #nullable disable
 
 namespace WMS_ERP_Backend.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
+    [DbContext(typeof(DbConnection))]
     [Migration("20250324012407_Initial")]
     partial class Initial
     {

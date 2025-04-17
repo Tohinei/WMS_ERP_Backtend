@@ -1,122 +1,192 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using WMS_ERP_Backend.DAOProject.IDAO;
-using WMS_ERP_Backend.Data;
+using WMS_ERP_Backend.DaoProject.Connection;
+using WMS_ERP_Backend.DaoProject.IDao;
+using WMS_ERP_Backend.DaoProject.Services;
 using WMS_ERP_Backend.Models;
-using WMS_ERP_Backend.Services;
 
-namespace WMS_ERP_Backend.DAOProject.DAO
+namespace WMS_ERP_Backend.DaoProject.Dao
 {
-    public class UserDAO : IUserDAO
+    public class UserDao : IUserDao
     {
-        private readonly AppDbContext _context;
+        private readonly DbConnection _context;
         private readonly JwtService _jwtService;
 
-        public UserDAO(AppDbContext context, JwtService jwtService)
+        public UserDao(DbConnection context, JwtService jwtService)
         {
             _context = context;
-            _jwtService = new JwtService("mysecretkeymysecretkeymysecretkeymysecretkeymysecretkey");
+            _jwtService = new JwtService(
+                "3fd133c1259bb53e43826ce7758897e6bafb804fb93b89f2e553796d7af58c99"
+            );
         }
 
-        public async Task Create(User user)
+        public User GetById(int userId)
         {
-            var hashedPassword = _jwtService.HashPassword(user.Password);
-            var existingRole = _context.Roles.FirstOrDefault(x => x.Id == user.RoleId);
-            if (existingRole != null)
+            string query =
+                @"SELECT UserId, FirstName, LastName, Email, Password, RoleId, MenuId, CreatedAt, UpdatedAt
+                             FROM [User]
+                             WHERE UserId = @UserId";
+
+            using (var connection = _context.CreateConnection())
             {
-                var newUser = new User
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
                 {
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    BirthDate = user.BirthDate,
-                    Status = user.Status,
-                    Email = user.Email,
-                    Password = user.Password,
-                    RoleId = user.RoleId,
-                };
-
-                await _context.Users.AddAsync(newUser);
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                throw new Exception("role doesn't exist");
-            }
-        }
-
-        public async Task Delete(int id)
-        {
-            User? user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-            if (user != null)
-            {
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task DeleteMany(List<int> userIds)
-        {
-            var users = await _context.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
-            if (users != null)
-            {
-                _context.Users.RemoveRange(users);
-                await _context.SaveChangesAsync();
+                    command.Parameters.AddWithValue("@UserId", userId);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new User
+                            {
+                                UserId = Convert.ToInt32(reader["UserId"]),
+                                FirstName = reader["FirstName"].ToString(),
+                                LastName = reader["LastName"].ToString(),
+                                Email = reader["Email"].ToString(),
+                                Password = reader["Password"].ToString(),
+                                RoleId = Convert.ToInt32(reader["RoleId"]),
+                                MenuId = Convert.ToInt32(reader["MenuId"]),
+                                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                UpdatedAt = reader["UpdatedAt"] as DateTime?,
+                            };
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+                }
             }
         }
 
-        public async Task<List<User>> GetAll()
+        public List<User> GetAll()
         {
-            return await _context
-                .Users.Include(r => r.Role)
-                .ThenInclude(m => m.Menu)
-                .ThenInclude(l => l.Links)
-                .ToListAsync();
+            string query =
+                @"SELECT UserId, FirstName, LastName, Email, Password, RoleId, MenuId, CreatedAt, UpdatedAt
+                             FROM [User]";
+
+            var users = new List<User>();
+
+            using (var connection = _context.CreateConnection())
+            {
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            users.Add(
+                                new User
+                                {
+                                    UserId = Convert.ToInt32(reader["UserId"]),
+                                    FirstName = reader["FirstName"].ToString(),
+                                    LastName = reader["LastName"].ToString(),
+                                    Email = reader["Email"].ToString(),
+                                    Password = reader["Password"].ToString(),
+                                    RoleId = Convert.ToInt32(reader["RoleId"]),
+                                    MenuId = Convert.ToInt32(reader["MenuId"]),
+                                    CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                    UpdatedAt = reader["UpdatedAt"] as DateTime?,
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+
+            return users;
         }
 
-        public async Task<User> GetById(int id)
+        public int Create(User user)
         {
-            User? user = await _context
-                .Users.Include(r => r.Role)
-                .ThenInclude(m => m.Menu)
-                .ThenInclude(l => l.Links)
-                .FirstOrDefaultAsync(u => u.Id == id);
+            string hashedPassword = _jwtService.HashPassword(user.Password);
 
-            if (user == null)
+            string query =
+                @"INSERT INTO [User] (FirstName, LastName, Email, Password, RoleId, MenuId, CreatedAt)
+                             VALUES (@FirstName, @LastName, @Email, @Password, @RoleId, @MenuId, @CreatedAt);
+                             SELECT SCOPE_IDENTITY();";
+
+            using (var connection = _context.CreateConnection())
             {
-                throw new ArgumentException("User Not Found");
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@FirstName", user.FirstName);
+                    command.Parameters.AddWithValue("@LastName", user.LastName);
+                    command.Parameters.AddWithValue("@Email", user.Email);
+                    command.Parameters.AddWithValue("@Password", hashedPassword);
+                    command.Parameters.AddWithValue("@RoleId", user.RoleId);
+                    command.Parameters.AddWithValue("@MenuId", user.MenuId);
+                    command.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+
+                    return Convert.ToInt32(command.ExecuteScalar());
+                }
             }
-            return user;
         }
 
-        public async Task Update(User updatedUser)
+        public bool Update(User user)
         {
-            User? user = await _context.Users.FirstOrDefaultAsync(u => u.Id == updatedUser.Id);
-            if (user != null)
+            string query =
+                @"UPDATE [User]
+                             SET FirstName = @FirstName, LastName = @LastName, Email = @Email,
+                                 RoleId = @RoleId, MenuId = @MenuId, UpdatedAt = @UpdatedAt
+                             WHERE UserId = @UserId";
+
+            using (var connection = _context.CreateConnection())
             {
-                user.FirstName = updatedUser.FirstName;
-                user.LastName = updatedUser.LastName;
-                user.BirthDate = updatedUser.BirthDate;
-                user.Email = updatedUser.Email;
-                user.RoleId = updatedUser.RoleId;
-                user.Role = updatedUser.Role;
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@FirstName", user.FirstName);
+                    command.Parameters.AddWithValue("@LastName", user.LastName);
+                    command.Parameters.AddWithValue("@Email", user.Email);
+                    command.Parameters.AddWithValue("@RoleId", user.RoleId);
+                    command.Parameters.AddWithValue("@MenuId", user.MenuId);
+                    command.Parameters.AddWithValue("@UpdatedAt", DateTime.Now);
+                    command.Parameters.AddWithValue("@UserId", user.UserId);
 
-                user.LastModified = DateTime.Now;
-
-                user.Password = updatedUser.Password;
-
-                //if (
-                //    !string.IsNullOrEmpty(updatedUser.Password)
-                //    && !_jwtService.VerifyPassword(updatedUser.Password, user.Password)
-                //)
-                //{
-                //    user.Password = _jwtService.HashPassword(updatedUser.Password);
-                //}
-                //else { }
-
-                await _context.SaveChangesAsync();
+                    return command.ExecuteNonQuery() > 0;
+                }
             }
+        }
+
+        public bool Delete(int userId)
+        {
+            string query = @"DELETE FROM [User] WHERE UserId = @UserId";
+
+            using (var connection = _context.CreateConnection())
+            {
+                connection.Open();
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", userId);
+                    return command.ExecuteNonQuery() > 0;
+                }
+            }
+        }
+
+        public bool DeleteMany(List<int> usersIds)
+        {
+            string query = @"DELETE FROM [User] WHERE UserId = @UserId";
+
+            using (var connection = _context.CreateConnection())
+            {
+                connection.Open();
+                foreach (var user in usersIds)
+                {
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@UserId", user);
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }
